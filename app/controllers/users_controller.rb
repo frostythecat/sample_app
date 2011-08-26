@@ -5,9 +5,14 @@ class UsersController < ApplicationController
   before_filter :admin_user, :only => :destroy
 
   def destroy
-  	User.find(params[:id]).destroy
-  	flash[:success] = "User destroyed"
-  	redirect_to users_path
+  	user = User.find(params[:id])
+	if user.admin?
+		flash[:error] = "Admin can not delete Admins"
+	else
+  		user.destroy
+  		flash[:success] = "User destroyed"
+  	end
+  		redirect_to users_path
   end
   
   def index
@@ -21,20 +26,28 @@ class UsersController < ApplicationController
   end
   
   def new
-  	@title = "Sign up"
-  	@user = User.new
+  	if signed_in?
+  		redirect_to root_url
+  	else
+  		@title = "Sign up"
+  		@user = User.new
+  	end
   end
   
   def create
-  	@user = User.new(params[:user])
-  	if @user.save
-  		sign_in(@user)
-  		flash[:success] = "Welcome to the Sample App!"
-  		redirect_to user_path(@user)
+  	if signed_in?
+  		redirect_to root_url
   	else
-  		@title = "Sign up"
-  		@user.password = ""
-  		render 'new'
+  		@user = User.new(params[:user])
+  		if @user.save
+  			sign_in(@user)
+  			flash[:success] = "Welcome to the Sample App!"
+  			redirect_to user_path(@user)
+  		else
+  			@title = "Sign up"
+  			@user.password = ""
+  			render 'new'
+  		end
   	end
   end
   

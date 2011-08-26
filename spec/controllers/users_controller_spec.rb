@@ -48,6 +48,11 @@ describe UsersController do
   			response.should have_selector("a", :href => "/users?page=2", :content => "2")
   			response.should have_selector("a", :href => "/users?page=2", :content => "Next")
   		end
+  		
+  		it "should not have the delete option for non-admin users" do
+  			get :index
+			response.should_not have_selector("a", :href => "/users/2", :content => "delete")
+  		end
   	end
   end
   
@@ -113,6 +118,18 @@ describe UsersController do
 		get :new
 		response.should have_selector("input[name='user[password_confirmation]'][type='password']")
 	end
+	
+	describe "for signed-in users" do
+		before(:each) do
+  			@user = Factory(:user)
+  			test_sign_in(@user)
+  		end
+  		
+  		it "should redirect to root" do
+  			get :new
+  			response.should redirect_to(root_url)
+  		end
+  	end
   end
   
   describe "POST 'create'" do
@@ -170,6 +187,18 @@ describe UsersController do
   		it "should sign the user in" do
   			post :create, :user => @attr
   			controller.should be_signed_in
+  		end
+  	end
+  	
+  	describe "for signed-in users" do
+		before(:each) do
+  			@user = Factory(:user)
+  			test_sign_in(@user)
+  		end
+  		
+  		it "should redirect to root" do
+  			post :create
+  			response.should redirect_to(root_url)
   		end
   	end
   end
@@ -305,8 +334,8 @@ describe UsersController do
   	
   	describe "as an admin-user" do
   		before(:each) do
-  			admin = Factory(:user, :email => "admin@example.com", :admin => true)
-  			test_sign_in(admin)
+  			@admin = Factory(:user, :email => "admin@example.com", :admin => true)
+  			test_sign_in(@admin)
   		end
   		
   		it "should destroy the user" do
@@ -318,6 +347,12 @@ describe UsersController do
   		it "should redirect to the users page" do
   			delete :destroy, :id => @user
   			response.should redirect_to(users_path)
+  		end
+  		
+  		it "should prevent admin from deleting themself" do
+  			lambda do
+  				delete :destroy, :id => @admin
+  			end.should_not change(User, :count)
   		end
   	end
   end
